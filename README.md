@@ -1,4 +1,5 @@
 # Nearest_Station
+
 ## Write up
 1. Create a function that takes a location and finds the nearest SEPTA Regional Rail train station using data set in local file.
 The return format of the train station must be in GeoJSON.
@@ -12,3 +13,14 @@ Return infomation should include: station name, station coordination, walking di
 
 ## Instructions
     python3 main.py
+
+## Data Sources 
+Philadelphia: SEPTARegionalRailStations2016.kmz
+D.C.: Metro_Stations_Regional.csv 
+NYC: DOITT_SUBWAY_STATION_01_13SEPT2010.csv 
+
+## Database
+tool: SQL Server Management Studio
+
+![Nearest_Station](712be61ff3d1149d010d70b607b5296.png)
+![DB_LOCK](754ade7879fe2b63ea82df1769e633c.png)
