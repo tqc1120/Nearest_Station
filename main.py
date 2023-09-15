@@ -2,11 +2,18 @@ from flask import Flask, request, render_template
 import nearest_station 
 import pyodbc
 from cachetools import TTLCache
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-cache = TTLCache(maxsize=1000, ttl=60) 
 
-doc = nearest_station.readKMLFile()
+cache = TTLCache(maxsize=1000, ttl=60) 
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["1 per second"],
+    storage_uri="memory://",
+)
 
 # connect with database
 conn_str = (
@@ -19,11 +26,14 @@ conn_str = (
 cnxn = pyodbc.connect(conn_str, autocommit=False)
 cursor = cnxn.cursor()
 
+doc = nearest_station.readKMLFile()
+
 @app.route("/")
 def home():
     return render_template('home.html')
 
 @app.route('/', methods=['POST'])
+@limiter.limit("1 per second")
 def my_home_post():
     text = request.form['text'] 
 
@@ -42,7 +52,7 @@ def my_home_post():
             return "Please input number as coordinate"
 
     x, y, z = float(coords[0]), float(coords[1]), float(coords[2])
-
+    print(type(doc))
     # return geojson_file
     geojson_file = nearest_station.getNearestStation(cursor, cnxn, x, y, z, doc)
     cache[text] = geojson_file
@@ -50,4 +60,3 @@ def my_home_post():
 
 if __name__ == "__main__":
     app.run(debug=True, port = 8000)
-    
