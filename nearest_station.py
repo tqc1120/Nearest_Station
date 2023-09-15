@@ -3,8 +3,10 @@ from pykml import parser
 from bs4 import BeautifulSoup
 import math
 from collections import defaultdict
-from geojson import Feature, Point
 import re
+import get_gj
+import database
+import db_lock
 
 def readKMLFile():
     kml_file = "SEPTARegionalRailStations2016.kmz"
@@ -13,12 +15,14 @@ def readKMLFile():
         doc = parser.parse(f)
         return doc
 
-def getNearestStation(x, y, z, doc):
+def getNearestStation(cursor, cnxn, x, y, z, doc):
     LONGITUDEDISTANCE = 54.6
     LATTITUDEDISTANCE = 69
-
+    
     # build station name to coordinate map
     nameToCoordinate = defaultdict(list)
+
+    db_lock.acquire(cursor, cnxn)
 
     for pm in doc.getroot().Document.Folder.Placemark:
         coordinate = pm.Point.coordinates
@@ -32,7 +36,7 @@ def getNearestStation(x, y, z, doc):
                     stationName = re.search(r"<td>(.+?)</td>", str(elementList[i + 1]))
                     nameToCoordinate[stationName.group(1)] = str(coordinate).split(',')
                     break
-    
+        
     # find nearest station
     minDistance = float("inf")
     nearestStation = ""
@@ -43,11 +47,18 @@ def getNearestStation(x, y, z, doc):
         if cur_Distance < minDistance:
             minDistance = cur_Distance
             nearestStation = stationName
-    
+        
     targetX, targetY, targetZ = nameToCoordinate[nearestStation]
 
+    # check if coordinate in database
+    coord_in_db = database.check_coords_in_db(cursor, x, y, z)
+
+    if coord_in_db:
+        db_lock.release(cursor, cnxn)
+        return coord_in_db
+
     # calculate distance and direction
-    eastWest = round((float(targetX) - x) * LONGITUDEDISTANCE, 2)
+    eastWest = round((float(targetX) - x) * LONGITUDEDISTANCE, 2)    
     northSouth = round((float(targetY) - y) * LATTITUDEDISTANCE, 2)
     direction1 = ""
     direction2 = ""
@@ -61,11 +72,14 @@ def getNearestStation(x, y, z, doc):
     else:
         direction2 += "To West " + str(abs(eastWest)) + " miles"
 
-    # create and return geojson object
-    point = Point((float(targetX), float(targetY), float(targetZ)))
     direction = ""
     if eastWest != 0:
         direction += direction1 + ", "
     if northSouth!= 0:
         direction += direction2
-    return Feature(geometry=point, properties={"stationName": nearestStation, "direction": direction})
+        
+    # add new info to database
+    database.add_info_to_db(cursor, cnxn, x, y, z, float(targetX), float(targetY), float(targetZ), nearestStation, direction)
+    db_lock.release(cursor, cnxn)
+
+    return get_gj.generate_geojson(float(targetX), float(targetY), float(targetZ), nearestStation, direction)
