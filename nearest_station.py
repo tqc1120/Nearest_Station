@@ -6,14 +6,16 @@ from collections import defaultdict
 from geojson import Feature, Point
 import re
 
-def getNearestStation(x, y, z):
-    LONGITUDEDISTANCE = 54.6
-    LATTITUDEDISTANCE = 69
-
+def readKMLFile():
     kml_file = "SEPTARegionalRailStations2016.kmz"
     kmz = ZipFile(kml_file, 'r')
     with kmz.open('doc.kml', 'r') as f:
         doc = parser.parse(f)
+        return doc
+
+def getNearestStation(x, y, z, doc):
+    LONGITUDEDISTANCE = 54.6
+    LATTITUDEDISTANCE = 69
 
     # build station name to coordinate map
     nameToCoordinate = defaultdict(list)
