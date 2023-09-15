@@ -1,7 +1,7 @@
 import get_gj
 
 def check_coords_in_db(cursor, x, y, z):
-  query = "SELECT * FROM Nearest_Station WITH (HOLDLOCK)"
+  query = "SELECT * FROM Nearest_Station;"
 
   cursor.execute(query)
   rows = cursor.fetchall()
@@ -14,4 +14,9 @@ def check_coords_in_db(cursor, x, y, z):
 def add_info_to_db(cursor, cnxn, in_x, in_y, in_z, out_x, out_y, out_z, station, direct): 
   cursor.execute("""INSERT INTO Nearest_Station (input_x, input_y, input_z, output_x, output_y, output_z, station_name, direction) 
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?) """, (in_x, in_y, in_z, out_x, out_y, out_z, station, direct))
+  cnxn.commit()
+
+def clear_table(cursor, cnxn):
+  query = "DELETE FROM Nearest_Station;"
+  cursor.execute(query)
   cnxn.commit()

@@ -1,12 +1,11 @@
 from zipfile import ZipFile
 from pykml import parser
 from bs4 import BeautifulSoup
-import math
 from collections import defaultdict
+import math
 import re
-import get_gj
-import database
-import db_lock
+import get_gj, database, db_lock
+
 
 def readKMLFile():
     kml_file = "SEPTARegionalRailStations2016.kmz"
@@ -83,3 +82,4 @@ def getNearestStation(cursor, cnxn, x, y, z, doc):
     db_lock.release(cursor, cnxn)
 
     return get_gj.generate_geojson(float(targetX), float(targetY), float(targetZ), nearestStation, direction)
+        

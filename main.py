@@ -1,13 +1,19 @@
 from flask import Flask, request, render_template
-import nearest_station 
 import pyodbc
 from cachetools import TTLCache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import other_cities, database, nearest_station
 
 app = Flask(__name__)
 
+# shared variable: specific city
+app.config['city'] = None
+
+# save searched data to cache
 cache = TTLCache(maxsize=1000, ttl=60) 
+
+# limit user's request in certain time frame
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -22,20 +28,38 @@ conn_str = (
     r'database=nearest_station;'
     r'trusted_connection=yes;'
     )
-
 cnxn = pyodbc.connect(conn_str, autocommit=False)
 cursor = cnxn.cursor()
 
+# dafault data: Philadelphia
 doc = nearest_station.readKMLFile()
+# D.C. data
+station2coords_dc = other_cities.read_dc_csv()
+# NYC data
+station2coords_nyc = other_cities.read_nyc_csv()
 
 @app.route("/")
-def home():
-    return render_template('home.html')
+def index():
+    return render_template('index.html')
 
-@app.route('/', methods=['POST'])
+@app.route('/button_click', methods=['POST'])
+def handle_form():
+    database.clear_table(cursor, cnxn)
+    cache.clear()
+
+    button_clicked = request.form.get('button')
+    if button_clicked == 'Button2':
+        app.config['city'] = "DC"
+    elif button_clicked == 'Button3':
+        app.config['city'] = "NYC"
+    else:
+        app.config['city'] = "Philadelphia"
+    return render_template('search.html')
+
+@app.route('/search', methods=['POST'])
 @limiter.limit("1 per second")
-def my_home_post():
-    text = request.form['text'] 
+def search():
+    text = request.form.get('text')
 
     cached_data = cache.get(text)
     if cached_data:
@@ -52,9 +76,13 @@ def my_home_post():
             return "Please input number as coordinate"
 
     x, y, z = float(coords[0]), float(coords[1]), float(coords[2])
-    print(type(doc))
-    # return geojson_file
-    geojson_file = nearest_station.getNearestStation(cursor, cnxn, x, y, z, doc)
+    
+    if app.config['city'] == "DC":
+        geojson_file = other_cities.getNearestStation(cursor, cnxn, x, y, z, station2coords_dc)
+    elif app.config['city'] == "NYC":
+        geojson_file = other_cities.getNearestStation(cursor, cnxn, x, y, z, station2coords_nyc)
+    else:
+        geojson_file = nearest_station.getNearestStation(cursor, cnxn, x, y, z, doc)
     cache[text] = geojson_file
     return geojson_file
 
