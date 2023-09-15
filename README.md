@@ -15,9 +15,9 @@ Return infomation should include: station name, station coordination, walking di
     python3 main.py
 
 ## Data Sources 
-Philadelphia: SEPTARegionalRailStations2016.kmz
-D.C.: Metro_Stations_Regional.csv 
-NYC: DOITT_SUBWAY_STATION_01_13SEPT2010.csv 
+    Philadelphia: SEPTARegionalRailStations2016.kmz
+    D.C.: Metro_Stations_Regional.csv
+    NYC: DOITT_SUBWAY_STATION_01_13SEPT2010.csv
 
 ## Database
 tool: SQL Server Management Studio
